@@ -182,21 +182,13 @@
                     </div> --}}
 
                     <div class="complement">
-                        
-                            @if ($paying_for === 'ADMISSION')
-                                @if ($trans_status === 'SUCCESS')
-                                <!-- //change -->
-                                    <a href="{{ env('REDIRECT_SHEET_DOWNLOAD_XII_URL') }}"     
-                                        style="text-decoration: none;">
-                                        DOWNLOAD SHEET
-                                    </a>
-                                @elseif ($trans_status === 'FAIL' || $trans_status === 'ABORT')
-                                    <a href="{{ env('REDIRECT_ENROLLMENT_XII_URL') }}" style="text-decoration: none;">
-                                        TRY AGAIN
-                                    </a>
-                                @endif
-                            @endif
-                       
+
+                        @if ($paying_for === 'APPLICATION')
+                            <a href="{{ env('REDIRECT_PROFILE_URL') }}" style="text-decoration: none;">
+                                GO BACK
+                            </a>
+                        @endif
+
                     </div>
                 </div>
             </div>

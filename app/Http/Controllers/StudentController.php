@@ -136,6 +136,11 @@ class StudentController extends Controller
             $student_bank_passbook_url = $check_student->s_bank_passbook_doc
                 ? URL::to("storage/{$check_student->s_bank_passbook_doc}")
                 : null;
+            $payment = PaymentTransaction::where([
+                'pmnt_modified_by' => $check_student->s_appl_form_num,
+                'pmnt_pay_type' => 'APPLICATION',
+                'trans_status' => 'SUCCESS'
+            ])->first();
             $message = "Data fetched successfully";
             $data = [
                 'ageon' => env('CUTOFF_DATE', date('Y-m-d')),
@@ -280,6 +285,11 @@ class StudentController extends Controller
                 'exam_12th_per_marks' => optional($qualification)->exam_12th_per_marks
                     ? json_decode($qualification->exam_12th_per_marks, true)
                     : [],
+                'payment_order_id' => $payment->order_id ?? '',
+                'payment_trans_amount' => $payment->trans_amount ?? '',
+                'payment_trans_id' => $payment->trans_id ?? '',
+                'payment_transaction_date' => $payment->trans_time ?? '',
+                'payment_status' => $payment->trans_status ?? ''
 
             ];
             return response()->json([
@@ -743,7 +753,8 @@ class StudentController extends Controller
         }
         $payment = PaymentTransaction::where([
             'pmnt_modified_by' => $form_num,
-            'pmnt_pay_type' => 'APPLICATION'
+            'pmnt_pay_type' => 'APPLICATION',
+            'trans_status' => 'SUCCESS'
         ])->first();
 
         $qrContent = [

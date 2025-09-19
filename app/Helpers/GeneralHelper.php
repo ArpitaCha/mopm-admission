@@ -701,7 +701,7 @@ function sbiDecrypt($data)
 function getPaymentData($orderid, $pay_amount, $other_data)
 {
     $marid = '5';
-    $marchent_id = env('SBI_PAYMENT_MERCHANT_ID');
+    $marchent_id = env('SBI_MERCHANT_ID');
     $api_key = env('SBI_PAYMENT_API');
 
     $base_url = env('APP_URL') . "/payment/";

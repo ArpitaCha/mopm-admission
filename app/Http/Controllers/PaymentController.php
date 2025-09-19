@@ -4,23 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
-use App\Models\Token;
 use App\Models\User;
-use App\Models\StudentChoice;
 use App\Models\PaymentTransaction;
-use App\Models\PaymentSpotTransaction;
-use App\Models\SpotStudent;
+use App\Models\Student;
 use App\Models\Payment;
 use App\Models\Fees;
 use Exception;
-use Validator;
-use DB;
-use App\PaymentLib\AESEncDec;
 use Illuminate\Support\Carbon;
-
-
-use App\Http\Resources\StudentChoiceResource;
 
 class PaymentController extends Controller
 {
@@ -59,11 +49,14 @@ class PaymentController extends Controller
                 ], 400);
             }
         }
+        if ($student_data['is_kanyashree'] == 1 && $student_data['s_kanyashree']) {
+            //  dd("hjj");
+            $total_appl_amount = Fees::where('cf_fees_type', 'APPLICATION')->where('cf_fees_code', 'APPLKAN')->first();
+        } else {
 
-        // Get fee amount
-        $total_appl_amount = Fees::select('cf_fees_amount')
-            ->where('cf_fees_type', 'APPLICATION')
-            ->first();
+            $total_appl_amount = Fees::where('cf_fees_type', 'APPLICATION')->where('cf_fees_code', 'APPLGENERAL')->first();
+        }
+
 
         if (!$total_appl_amount || $total_appl_amount->cf_fees_amount <= 0) {
             return response()->json([
@@ -76,7 +69,6 @@ class PaymentController extends Controller
 
         $other_data = "{$student_data['student_name']}_{$student_data['student_phn_no']}_{$student_data['student_payment_for']}_{$student_data['appl_form_num']}_{$student_data['session_year']}_{$amount}";
 
-        // Generate a random 10-character order ID
         $orderid = '';
         for ($i = 0; $i < 10; $i++) {
             $d = rand(1, 30) % 2;
@@ -121,10 +113,15 @@ class PaymentController extends Controller
     {
 
         // Merchant Order Number|SBIePayRefID/ATRN|Transaction Status|Amount|Currency|Pay Mode|Other Details|Reason/Message|Bank Code|Bank Reference Number|Transaction Date|Country|CIN|Merchant ID|Total Fee GST |Ref1|Ref2|Ref3|Ref4|Ref5|Ref6|Ref7|Ref8|Ref9
+
+        $trans_details = sbiDecrypt($request->encData);
+        $data = explode('|', $trans_details);
+
+        $order_id = $data[0];
+
         try {
-            $trans_details = sbiDecrypt($request->encData);
-            $data = explode('|', $trans_details);
-            $order_id = $data[0];
+            $tranction = PaymentTransaction::where('order_id', $order_id)->first();
+
             $trans_id = $data[1];
             $trans_status = $data[2];
             $trans_amount = $data[3];
@@ -132,8 +129,9 @@ class PaymentController extends Controller
             $trans_mode = $data[5];
             $message = $data[7];
             $trans_time = $data[10];
-            $marchnt_id = $data[13];
-            $other_data = explode('_', $data[5]);
+            $country_code = $data[11];
+            $marchant_id = $data[13];
+            $other_data = explode('_', $data[6]);
 
 
             $student_name = $other_data[0];
@@ -150,13 +148,13 @@ class PaymentController extends Controller
 
             if ($status !== null) {
                 Student::where([
-                    'student_form_num' => $form_num,
+                    's_appl_form_num' => $form_num,
                     // 'student_semester' => $semester,
                 ])->update([
                     's_admited_status' => $status
                 ]);
             }
-            $tranction = PaymentTransaction::where('order_id', $order_id)->first();
+
 
             if ($tranction) {
                 $tranction->update([
@@ -165,22 +163,13 @@ class PaymentController extends Controller
                     'trans_amount' => $trans_amount,
                     'trans_mode' => $trans_mode,
                     'trans_time' => $trans_time,
-                    'marchnt_id' => $marchnt_id,
+                    'marchnt_id' => $marchant_id,
                     'trans_details' => $trans_details,
                     'is_verified' => 1,
 
                 ]);
 
-                Payment::create([
-                    'order_id' => $order_id,
-                    'trans_id' => $trans_id,
-                    'paid_type' => $paying_for,
-                    'paid_amount' => $trans_amount,
-                    'paid_at' => $trans_time,
-                    'payment_mode' => $trans_mode,
-                    'detail' => $trans_details,
-                    'form_no' =>  $form_num
-                ]);
+
 
                 Student::where('s_appl_form_num', $form_num)
                     ->update([
@@ -207,12 +196,14 @@ class PaymentController extends Controller
             ]);
         }
     }
+
     public function paymentFail(Request $request)
     {
         // Merchant Order Number|SBIePayRefID/ATRN|Transaction Status|Amount|Currency|Pay Mode|Other Details|Reason/Message|Bank Code|Bank Reference Number|Transaction Date|Country|CIN|Merchant ID|Total Fee GST |Ref1|Ref2|Ref3|Ref4|Ref5|Ref6|Ref7|Ref8|Ref9
         try {
             $trans_details = sbiDecrypt($request->encData);
             $data = explode('|', $trans_details);
+
             $order_id = $data[0];
             $trans_id = $data[1];
             $trans_status = $data[2];
@@ -221,8 +212,9 @@ class PaymentController extends Controller
             $trans_mode = $data[5];
             $message = $data[7];
             $trans_time = $data[10];
-            $marchnt_id = $data[13];
-            $other_data = explode('_', $data[5]);
+            $country_code = $data[11];
+            $marchant_id = $data[13];
+            $other_data = explode('_', $data[6]);
 
 
             $student_name = $other_data[0];
@@ -240,7 +232,7 @@ class PaymentController extends Controller
                     'trans_amount' => $trans_amount,
                     'trans_mode' => $trans_mode,
                     'trans_time' => $trans_time,
-                    'marchnt_id' => $marchnt_id,
+                    'marchnt_id' => $marchant_id,
                     'trans_details' => $trans_details,
                     'is_verified' => 1,
                 ]);

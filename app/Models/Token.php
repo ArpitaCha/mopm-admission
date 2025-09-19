@@ -8,7 +8,7 @@ use Session;
 
 class Token extends Model
 {
-    protected $table        =   'tokens';
+    protected $table        =   'auth_tokens';
     protected $primaryKey   =   't_id';
     public $timestamps      =   false;
 
